@@ -1,0 +1,67 @@
+/* Helvetica Now Display Font Family */
+@font-face {
+  font-family: 'Helvetica Now Display';
+  src: url('/assets/fonts/HelveticaNowDisplay-Medium.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Helvetica Now Display';
+  src: url('/assets/fonts/HelveticaNowDisplay-Bold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Helvetica Now Display';
+  src: url('/assets/fonts/HelveticaNowDisplay-ExtraBold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Helvetica Now Display';
+  src: url('/assets/fonts/HelveticaNowDisplay-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* CSS Custom Properties for easy usage */
+:root {
+  --font-primary: 'Helvetica Now Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-weight-regular: 400;
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 900;
+}
+
+/* Global font application */
+* {
+  font-family: var(--font-primary);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Utility classes for different weights */
+.font-regular {
+  font-weight: var(--font-weight-regular);
+}
+
+.font-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+.font-extrabold {
+  font-weight: var(--font-weight-extrabold);
+}
+
+.font-black {
+  font-weight: var(--font-weight-black);
+}
