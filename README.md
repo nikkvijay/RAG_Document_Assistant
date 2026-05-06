@@ -279,6 +279,6 @@ If you have any questions or need help, please:
 
 ---
 
-**Made with ❤️ by [Your Name]**
+
 
 *Empowering document intelligence through AI*

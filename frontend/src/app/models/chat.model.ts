@@ -8,10 +8,12 @@ export interface ChatMessage {
 }
 
 export interface SourceDocument {
-  pageContent: string;
+  page_content: string;   // snake_case — matches FastAPI response
   metadata: {
     source?: string;
     page?: number;
+    chunk_index?: number;
+    relevance?: number;
     [key: string]: any;
   };
 }

@@ -5,19 +5,39 @@ import { environment } from '../../environments/environment';
 
 export interface DocumentUploadResponse {
   success: boolean;
-  chunksCount: number;
+  chunks_count: number;   // snake_case from FastAPI
   message: string;
-  filename?: string;
+  file_name?: string;
+  filename?: string;      // original multipart filename
 }
 
 export interface QueryResponse {
   success: boolean;
   answer: string;
-  sourceDocuments: any[];
+  source_documents: SourceDoc[];
   metadata: {
     question: string;
     timestamp: string;
-    sourcesCount: number;
+    sources_count: number;
+    documents_used: number;
+    document_sources: string[];
+    total_documents_available: number;
+    // Self-healing loop fields
+    critique_verdict?: 'grounded' | 'hallucinated' | 'insufficient';
+    critique_reason?: string;
+    iterations_used?: number;
+    is_safe_fallback?: boolean;
+  };
+}
+
+export interface SourceDoc {
+  page_content: string;
+  metadata: {
+    source?: string;
+    page?: number;
+    chunk_index?: number;
+    relevance?: number;
+    [key: string]: any;
   };
 }
 
@@ -25,12 +45,12 @@ export interface HealthResponse {
   success: boolean;
   status: string;
   timestamp: string;
-  uptime: number;
-  ragStatus: {
-    isReady: boolean;
-    documentsCount: number;
-    hasRetriever: boolean;
-    hasChain: boolean;
+  uptime_seconds: number;
+  rag_status: {
+    is_ready: boolean;
+    documents_count: number;
+    has_retriever: boolean;
+    has_model: boolean;
   };
 }
 
@@ -91,4 +111,25 @@ export class ApiService {
   getSystemStatus(): Observable<any> {
     return this.http.get(`${this.apiUrl}/documents/status`);
   }
+
+  // Get insights dashboard data
+  getInsights(): Observable<InsightsResponse> {
+    return this.http.get<InsightsResponse>(`${this.apiUrl}/insights`);
+  }
+}
+
+export interface InsightsResponse {
+  success: boolean;
+  documents_count: number;
+  total_chunks: number;
+  documents: { file_name: string; chunks_count: number; uploaded_at: string }[];
+  query_stats: {
+    total_7d: number;
+    total_30d: number;
+    total_all: number;
+    daily_counts: number[];         // 7 values, oldest → newest
+    avg_chunks_per_query: number;
+  };
+  top_topics: { name: string; count: number; pct: number }[];
+  activity: { level: string; message: string; ago: string; timestamp: string }[];
 }

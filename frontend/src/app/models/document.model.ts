@@ -25,8 +25,8 @@ export interface UploadProgress {
 
 export interface DocumentUploadResponse {
   success: boolean;
-  chunksCount: number;
+  chunks_count: number;   // snake_case from FastAPI
   message: string;
+  file_name?: string;
   filename?: string;
-  documentId?: string;
 }
