@@ -1,37 +1,249 @@
-<div class="min-h-screen bg-gray-900">
-  <!-- Header -->
-  <header class="bg-gray-800 shadow-lg border-b border-gray-700">
-    <div class="mx-auto px-4 py-4">
-      <h1 class="text-2xl font-bold text-white">{{ title() }}</h1>
+<div class="app-shell">
+
+  <!-- ── Command Palette overlay ───────────────────────────────────────────── -->
+  <app-command-palette
+    *ngIf="showSearch()"
+    [documents]="documents()"
+    (close)="closeSearch()"
+    (action)="handlePaletteAction($event)">
+  </app-command-palette>
+
+  <!-- ── Top Bar ───────────────────────────────────────────────────────────── -->
+  <header class="topbar" role="banner">
+    <div class="topbar-left">
+      <div class="logomark" aria-hidden="true"></div>
+      <span class="wordmark">RAG.<em>analyst</em></span>
+      <div class="status-pill">
+        <span class="led" [class.amber]="statusAmber()"></span>
+        {{ statusLabel() }}
+      </div>
     </div>
-  </header>
 
-  <!-- Main Content -->
-  <main class="mx-auto px-4 py-8">
-    <div class="flex flex-col lg:flex-row gap-8 justify-center items-start">
-      <div class="flex flex-col gap-8 w-full lg:w-1/2">
-        <!-- Document Upload -->
-        <div class="bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-700">
-          <h2 class="text-xl font-semibold text-white mb-4">Upload Documents</h2>
-          <app-document-upload (uploadComplete)="onDocumentUploaded($event)"></app-document-upload>
-        </div>
+    <div class="topbar-right">
+      <!-- Stats pill -->
+      <div class="stats-pill" *ngIf="docCount() > 0">
+        Docs <span>{{ docCount() }}</span>
+        <span class="sep"></span>
+        Chunks <span>{{ totalChunks() | number }}</span>
+        <span class="sep"></span>
+        Index <span>v1.0</span>
+      </div>
 
-        <!-- Document List -->
-        <div class="bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-700" *ngIf="documentsUploaded()">
-          <h3 class="text-xl font-semibold text-white mb-4">Documents ({{ documentCount() }})</h3>
-          <div class="space-y-3">
-            <div *ngFor="let doc of uploadedDocuments(); trackBy: trackByDocument" class="text-sm text-gray-300 bg-gray-700/50 p-3 rounded-lg">
-              {{ doc.name }} ({{ doc.chunksCount }} chunks)
+      <!-- View switcher -->
+      <div class="seg-ctrl" role="tablist" aria-label="View">
+        <button class="seg-btn" [class.active]="currentView() === 'chat'"
+          role="tab" [attr.aria-selected]="currentView() === 'chat'"
+          (click)="switchView('chat')">Chat</button>
+        <button class="seg-btn" [class.active]="currentView() === 'upload'"
+          role="tab" [attr.aria-selected]="currentView() === 'upload'"
+          (click)="switchView('upload')">Upload</button>
+        <button class="seg-btn" [class.active]="currentView() === 'insights'"
+          role="tab" [attr.aria-selected]="currentView() === 'insights'"
+          (click)="switchView('insights')">Insights</button>
+      </div>
+
+      <!-- Search ⌘K -->
+      <button class="icon-btn" aria-label="Search (⌘K)" (click)="openSearch()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      </button>
+
+      <!-- Notifications -->
+      <div class="notif-anchor">
+        <button class="icon-btn" aria-label="Notifications"
+          [class.active]="showNotifications()"
+          (click)="showNotifications.set(!showNotifications())">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+        </button>
+
+        <!-- Notification dropdown -->
+        <div class="notif-dropdown" *ngIf="showNotifications()" (click)="$event.stopPropagation()">
+          <div class="notif-header">
+            <span class="notif-title">Notifications</span>
+            <button class="notif-clear" (click)="showNotifications.set(false)">✕</button>
+          </div>
+          <div class="notif-list">
+            <div *ngFor="let n of notifications" class="notif-row">
+              <span class="notif-dot" [class]="'dot-' + n.dot"></span>
+              <span class="notif-text">{{ n.text }}</span>
+              <span class="notif-ago">{{ n.ago }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Chat Interface -->
-      <div class="bg-gray-800 rounded-xl shadow-2xl p-6 border border-gray-700 w-full lg:w-1/2">
-        <h2 class="text-xl font-semibold text-white mb-4">Chat</h2>
-        <app-chat [documentsReady]="documentsUploaded()"></app-chat>
-      </div>
+      <div class="avatar" role="img" aria-label="User avatar">JL</div>
     </div>
-  </main>
+  </header>
+
+  <!-- ── Body Columns ───────────────────────────────────────────────────────── -->
+  <div class="body-cols" [class.nav-collapsed]="sidebarCollapsed()" (click)="showNotifications.set(false)">
+
+    <!-- Left Nav -->
+    <nav class="left-nav" aria-label="Navigation">
+
+      <!-- Collapse toggle -->
+      <div class="nav-toggle-row">
+        <button class="nav-toggle-btn" (click)="toggleSidebar(); $event.stopPropagation()"
+          [title]="sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              [attr.d]="sidebarCollapsed()
+                ? 'M9 5l7 7-7 7'
+                : 'M15 19l-7-7 7-7'"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="nav-section">
+        <p class="nav-section-label">Workspace</p>
+        <a class="nav-item" [class.active]="currentView() === 'chat'"
+          (click)="switchView('chat')" style="cursor:pointer" title="Chat">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+          <span class="nav-item-label">Chat</span>
+          <span class="nav-kbd" (click)="newThread(); $event.stopPropagation()">⌘N</span>
+        </a>
+        <a class="nav-item" [class.active]="currentView() === 'upload'"
+          (click)="switchView('upload')" style="cursor:pointer" title="Sources">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="nav-item-label">Sources</span>
+          <span class="nav-badge" *ngIf="docCount() > 0">{{ docCount() }}</span>
+        </a>
+        <a class="nav-item" [class.active]="currentView() === 'insights'"
+          (click)="switchView('insights')" style="cursor:pointer" title="Insights">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+          </svg>
+          <span class="nav-item-label">Insights</span>
+        </a>
+        <a class="nav-item" (click)="openSearch()" style="cursor:pointer" title="Search (⌘K)">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <span class="nav-item-label">Search</span>
+          <span class="nav-kbd">⌘K</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <p class="nav-section-label">Threads</p>
+        <a class="nav-item" (click)="newThread()" style="cursor:pointer"
+          title="New thread (⌘N)">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          <span class="nav-item-label">New thread</span>
+          <span class="nav-kbd">⌘N</span>
+        </a>
+      </div>
+
+      <div class="nav-section">
+        <p class="nav-section-label">System</p>
+        <a class="nav-item" (click)="switchView('insights')" style="cursor:pointer" title="Settings">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+          <span class="nav-item-label">Settings</span>
+        </a>
+      </div>
+
+      <div class="nav-footer">
+        <div class="quota-widget">
+          <div class="quota-label">Index Storage</div>
+          <div class="quota-bar">
+            <div class="quota-fill" [style.width]="(docCount() > 0 ? 62 : 0) + '%'"></div>
+          </div>
+          <div class="quota-meta">{{ docCount() > 0 ? '62% · re-indexes nightly' : '0% · no documents' }}</div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Center Column -->
+    <div class="center-col" role="main">
+      <app-chat
+        *ngIf="currentView() === 'chat'"
+        [documentsReady]="isIndexReady()"
+        [documents]="documents()"
+        [activeDocument]="activeDocument()"
+        [newThreadTrigger]="newThreadTrigger()">
+      </app-chat>
+
+      <app-document-upload
+        *ngIf="currentView() === 'upload'"
+        [uploadMode]="uploadMode()"
+        (uploadComplete)="onDocumentUploaded($event)">
+      </app-document-upload>
+
+      <app-insights
+        *ngIf="currentView() === 'insights'">
+      </app-insights>
+    </div>
+
+    <!-- Right Library -->
+    <aside class="right-lib" aria-label="Document library">
+      <div class="lib-header">
+        <div class="lib-title">Library</div>
+        <div class="lib-sub">Precision RAG Engine</div>
+      </div>
+
+      <div class="active-doc-card" *ngIf="activeDocument()">
+        <!-- Top row: name + ACTIVE chip — never overlap -->
+        <div class="active-doc-top-row">
+          <span class="active-doc-name" [title]="activeDocument()!.name">{{ activeDocument()!.name }}</span>
+          <span class="active-chip">ACTIVE</span>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div class="doc-icon">
+            <span class="doc-icon-label">PDF</span>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-4)">
+              {{ activeDocument()!.chunksCount }} chunks indexed
+            </div>
+          </div>
+        </div>
+        <div class="index-health" aria-label="Index health visualization">
+          <div *ngFor="let bar of healthBars" class="health-bar" [ngClass]="bar.cls" [style.height.px]="bar.h"></div>
+        </div>
+        <div class="lib-actions">
+          <button class="btn-ghost" (click)="replaceDocument()">Replace</button>
+          <button class="btn-primary" (click)="addSourceClicked()">Append</button>
+        </div>
+      </div>
+
+      <div *ngIf="!activeDocument()" style="padding:16px;text-align:center">
+        <div style="font-size:12px;color:var(--ink-4);margin-bottom:8px">No documents indexed</div>
+        <button class="btn-primary" style="width:100%" (click)="addSourceClicked()">Upload first document</button>
+      </div>
+
+      <div *ngIf="documents().length > 0">
+        <div class="lib-section-label">All Sources</div>
+        <div
+          *ngFor="let doc of documents(); trackBy: trackByDoc"
+          class="lib-src-item"
+          (click)="setActiveDocument(doc.id)"
+          [style.background]="doc.id === activeDocumentId() ? 'rgba(128,131,255,0.06)' : ''">
+          <span class="ext-chip" [class]="'ext-' + doc.type">{{ doc.type.toUpperCase() }}</span>
+          <span class="src-name" [title]="doc.name">{{ doc.name }}</span>
+          <span class="src-meta">{{ doc.chunksCount }}c</span>
+        </div>
+      </div>
+
+      <div class="add-source-card" (click)="addSourceClicked()"
+        role="button" tabindex="0" aria-label="Add a new source document"
+        (keydown.enter)="addSourceClicked()" (keydown.space)="addSourceClicked()">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Add source
+      </div>
+    </aside>
+  </div>
 </div>
